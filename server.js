@@ -46,8 +46,22 @@ const server = http.createServer((req, res) => {
   const arquivo = path.join(ROOT, relativo);
   if (!publico || !arquivo.startsWith(ROOT + path.sep)) return texto(res, 404, 'Página não encontrada');
 
+  // Se os arquivos foram enviados ao GitHub sem as pastas (tudo na raiz), procura pelo nome na raiz
+  const SOLTOS = ['style.css', 'app.js', 'engine.js', 'favicon.svg'];
+  const alternativo = SOLTOS.includes(path.basename(relativo)) ? path.join(ROOT, path.basename(relativo)) : null;
+  const servir = (arq, st) => entregar(req, res, arq, st);
   fs.stat(arquivo, (err, st) => {
-    if (err || !st.isFile()) return texto(res, 404, 'Página não encontrada');
+    if (!err && st.isFile()) return servir(arquivo, st);
+    if (!alternativo) return texto(res, 404, 'Página não encontrada');
+    fs.stat(alternativo, (err2, st2) => {
+      if (err2 || !st2.isFile()) return texto(res, 404, 'Página não encontrada: ' + relativo);
+      servir(alternativo, st2);
+    });
+  });
+});
+
+function entregar(req, res, arquivo, st) {
+  {
     const tipo = TYPES[path.extname(arquivo).toLowerCase()] || 'application/octet-stream';
     const etag = `W/"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`;
     const cab = {
@@ -69,8 +83,8 @@ const server = http.createServer((req, res) => {
     const leitura = fs.createReadStream(arquivo);
     leitura.on('error', () => res.destroy());
     (gzip ? leitura.pipe(zlib.createGzip()) : leitura).pipe(res);
-  });
-});
+  }
+}
 
 server.listen(PORT, () => {
   console.log(`Planta Elétrica BIM no ar na porta ${PORT}`);
