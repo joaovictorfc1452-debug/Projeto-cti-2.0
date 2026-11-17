@@ -1,0 +1,10 @@
+# Blueprint do Render (opcional): New > Blueprint > escolha este repositório.
+# Pelo painel: New > Web Service, Build Command = yarn, Start Command = yarn start.
+services:
+  - type: web
+    name: planta-eletrica-bim
+    runtime: node
+    plan: free
+    buildCommand: yarn
+    startCommand: yarn start
+    healthCheckPath: /healthz
